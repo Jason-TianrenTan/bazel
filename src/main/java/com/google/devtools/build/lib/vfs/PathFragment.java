@@ -695,7 +695,7 @@ public abstract class PathFragment
   }
 
   /**
-   * Returns true if the passed path contains uplevel references ".." or single-dot references "."
+   * Returns true if the passed path is correctly normalized
    *
    * <p>This is useful to check a string for normalization before constructing a PathFragment, since
    * these are always normalized and will throw uplevel references away.
@@ -709,6 +709,7 @@ public abstract class PathFragment
     Separator, /* We just saw a separator */
     Dot, /* We just saw a dot after a separator */
     DotDot, /* We just saw two dots after a separator */
+    SeparatorSeparator, /*We just saw another separator after a separator*/
   }
 
   private static boolean isNormalizedImpl(String path, boolean lookForSameLevelReferences) {
@@ -731,10 +732,17 @@ public abstract class PathFragment
             state = NormalizedImplState.Separator;
           } else if (c == '.') {
             state = NormalizedImplState.Dot;
-          } else {
+          } else if (c == '/') {
+            state = NormalizedImplState.SeparatorSeparator;
+          }else {
             state = NormalizedImplState.Base;
           }
           break;
+        case SeparatorSeparator:
+          if (isSeparator) {
+            // "//" segment found
+            return false;
+          }
         case Dot:
           if (isSeparator) {
             if (lookForSameLevelReferences) {
