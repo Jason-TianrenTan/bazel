@@ -709,7 +709,6 @@ public abstract class PathFragment
     Separator, /* We just saw a separator */
     Dot, /* We just saw a dot after a separator */
     DotDot, /* We just saw two dots after a separator */
-    SeparatorSeparator, /*We just saw another separator after a separator*/
   }
 
   private static boolean isNormalizedImpl(String path, boolean lookForSameLevelReferences) {
@@ -732,17 +731,10 @@ public abstract class PathFragment
             state = NormalizedImplState.Separator;
           } else if (c == '.') {
             state = NormalizedImplState.Dot;
-          } else if (c == '/') {
-            state = NormalizedImplState.SeparatorSeparator;
-          }else {
+          } else {
             state = NormalizedImplState.Base;
           }
           break;
-        case SeparatorSeparator:
-          if (isSeparator) {
-            // "//" segment found
-            return false;
-          }
         case Dot:
           if (isSeparator) {
             if (lookForSameLevelReferences) {
