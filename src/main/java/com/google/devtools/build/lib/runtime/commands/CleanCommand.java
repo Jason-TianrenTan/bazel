@@ -47,8 +47,10 @@ import com.google.devtools.common.options.OptionEffectTag;
 import com.google.devtools.common.options.OptionsBase;
 import com.google.devtools.common.options.OptionsParsingResult;
 import java.io.FileDescriptor;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.Collection;
 import java.util.UUID;
 import java.util.logging.LogManager;
 
@@ -319,22 +321,33 @@ public final class CleanCommand implements BlazeCommand {
     } else {
       logger.atInfo().log("Output cleaning...");
       env.getBlazeWorkspace().resetEvaluator();
-      Path execroot = outputBase.getRelative("execroot");
-      if (execroot.exists()) {
-        logger.atFinest().log("Cleaning %s%s", execroot, async ? " asynchronously..." : "");
-        if (async) {
-          try {
-            asyncClean(env, execroot, "Output tree");
-          } catch (IOException e) {
-            throw new CleanException(Code.EXECROOT_TEMP_MOVE_FAILURE, e);
-          } catch (CommandException e) {
-            throw new CleanException(Code.ASYNC_EXECROOT_DELETE_FAILURE, e);
-          }
-        } else {
-          try {
-            execroot.deleteTreesBelow();
-          } catch (IOException e) {
-            throw new CleanException(Code.EXECROOT_DELETE_FAILURE, e);
+      Collection<Path> allBazelPath;
+      if (cleanAll) {
+        outputBase = outputBase.getParentDirectory();
+      }
+      try {
+        allBazelPath = outputBase.getDirectoryEntries();
+      } catch (IOException e) {
+        throw new CleanException(Code.OUTPUT_BASE_DELETE_FAILURE, e);
+      }
+      for (Path path : allBazelPath) {
+        Path execroot = path.getRelative("execroot");
+        if (execroot.exists()) {
+          logger.atFinest().log("Cleaning %s%s", execroot, async ? " asynchronously..." : "");
+          if (async) {
+            try {
+              asyncClean(env, execroot, "Output tree");
+            } catch (IOException e) {
+              throw new CleanException(Code.EXECROOT_TEMP_MOVE_FAILURE, e);
+            } catch (CommandException e) {
+              throw new CleanException(Code.ASYNC_EXECROOT_DELETE_FAILURE, e);
+            }
+          } else {
+            try {
+              execroot.deleteTreesBelow();
+            } catch (IOException e) {
+              throw new CleanException(Code.EXECROOT_DELETE_FAILURE, e);
+            }
           }
         }
       }
