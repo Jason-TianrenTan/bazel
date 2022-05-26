@@ -115,6 +115,15 @@ public final class CleanCommand implements BlazeCommand {
                 + " deleted. Without this flag, only symlinks with the predefined suffixes are"
                 + " cleaned.")
     public boolean removeAllConvenienceSymlinks;
+
+    @Option(
+            name = "clean_all",
+            defaultValue = "false",
+            documentationCategory = OptionDocumentationCategory.OUTPUT_SELECTION,
+            effectTags = {OptionEffectTag.AFFECTS_OUTPUTS},
+            help =
+                    "")
+    public boolean cleanAll;
   }
 
   private final OS os;
@@ -166,6 +175,7 @@ public final class CleanCommand implements BlazeCommand {
           env.getOutputBase(),
           cleanOptions.expunge,
           async,
+          cleanOptions.cleanAll,
           symlinkPrefix,
           cleanOptions.removeAllConvenienceSymlinks);
     } catch (CleanException e) {
@@ -246,6 +256,7 @@ public final class CleanCommand implements BlazeCommand {
       Path outputBase,
       boolean expunge,
       boolean async,
+      boolean cleanAll,
       String symlinkPrefix,
       boolean removeAllConvenienceSymlinks)
       throws CleanException, InterruptedException {
@@ -287,6 +298,9 @@ public final class CleanCommand implements BlazeCommand {
       // be a small possibility of a server race if a client is waiting, but
       // all significant files will be gone by then.
       try {
+        if (cleanAll) {
+          outputBase = outputBase.getParentDirectory();
+        }
         outputBase.deleteTreesBelow();
         outputBase.deleteTree();
       } catch (IOException e) {
