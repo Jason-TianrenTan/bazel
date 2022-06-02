@@ -53,6 +53,7 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.UUID;
 import java.util.logging.LogManager;
+import java.util.Arrays;
 
 /** Implements 'blaze clean'. */
 @Command(
@@ -324,11 +325,13 @@ public final class CleanCommand implements BlazeCommand {
       Collection<Path> allBazelPath;
       if (cleanAll) {
         outputBase = outputBase.getParentDirectory();
-      }
-      try {
-        allBazelPath = outputBase.getDirectoryEntries();
-      } catch (IOException e) {
-        throw new CleanException(Code.OUTPUT_BASE_DELETE_FAILURE, e);
+        try {
+          allBazelPath = outputBase.getDirectoryEntries();
+        } catch (IOException e) {
+          throw new CleanException(Code.OUTPUT_BASE_DELETE_FAILURE, e);
+        }
+      } else {
+          allBazelPath = Arrays.asList(outputBase);
       }
       for (Path path : allBazelPath) {
         Path execroot = path.getRelative("execroot");
