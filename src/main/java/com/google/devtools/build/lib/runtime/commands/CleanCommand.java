@@ -313,7 +313,20 @@ public final class CleanCommand implements BlazeCommand {
       logger.atInfo().log("Expunging asynchronously...");
       runtime.prepareForAbruptShutdown();
       try {
-        asyncClean(env, outputBase, "Output base");
+        Collection<Path> allBazelPath;
+        if (cleanAll) {
+          outputBase = outputBase.getParentDirectory();
+          try {
+            allBazelPath = outputBase.getDirectoryEntries();
+          } catch (IOException e) {
+            throw new CleanException(Code.OUTPUT_BASE_DELETE_FAILURE, e);
+          }
+        } else {
+          allBazelPath = Arrays.asList(outputBase);
+        }
+        for (Path path : allBazelPath) {
+          asyncClean(env, path, "Output base");
+        }
       } catch (IOException e) {
         throw new CleanException(Code.OUTPUT_BASE_TEMP_MOVE_FAILURE, e);
       } catch (CommandException e) {
