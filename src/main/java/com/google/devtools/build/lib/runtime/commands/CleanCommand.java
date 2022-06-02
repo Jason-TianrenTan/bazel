@@ -125,7 +125,7 @@ public final class CleanCommand implements BlazeCommand {
             documentationCategory = OptionDocumentationCategory.OUTPUT_SELECTION,
             effectTags = {OptionEffectTag.AFFECTS_OUTPUTS},
             help =
-                    "")
+                    "If true, repetitively clean all outputBase under outputUserRoot.")
     public boolean cleanAll;
   }
 

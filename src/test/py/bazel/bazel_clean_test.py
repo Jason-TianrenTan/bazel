@@ -63,7 +63,7 @@ class BazelCleanTest(test_base.TestBase):
           os.path.join(bazel_genfiles, 'foo/x.out')))
       self.assertFalse(os.path.exists(output_base))
 
-  def testBazelCleanAll(self):
+  def createTwoOutputBase(self):
     self.ScratchFile('foo1/WORKSPACE')
     self.ScratchFile('foo1/foo/BUILD', [
       'genrule(',
@@ -101,6 +101,10 @@ class BazelCleanTest(test_base.TestBase):
     exit_code, stdout, stderr = self.RunBazel(['info', 'output_base'])
     self.AssertExitCode(exit_code, 0, stderr)
     output_base2 = stdout[0]
+    return (bazel_genfiles1, output_base1, bazel_genfiles2, output_base2)
+
+  def testBazelCleanAll(self):
+    bazel_genfiles1, output_base1, bazel_genfiles2, output_base2 = self.createTwoOutputBase()
 
     # Repeat 10 times to ensure flaky error like
     # https://github.com/bazelbuild/bazel/issues/5907 are caught.
@@ -154,6 +158,30 @@ class BazelCleanTest(test_base.TestBase):
     # Two directories should be different.
     self.assertNotEqual(second_temp, first_temp, stderr)
 
+  def testBazelAsyncCleanAll(self):
+    bazel_genfiles1, output_base1, bazel_genfiles2, output_base2 = self.createTwoOutputBase()
+    # Build in foo1
+    for _ in range(0,10):
+      self._test_cwd = 'foo1'
+      exit_code, _, stderr = self.RunBazel(['build', '//foo:x'])
+      self.AssertExitCode(exit_code, 0, stderr)
+      self.assertTrue(os.path.exists(
+        os.path.join(bazel_genfiles1, 'foo/x.out')))
+      # Build in foo2
+      self._test_cwd = 'foo2'
+      exit_code, _, stderr = self.RunBazel(['build', '//foo:x'])
+      self.AssertExitCode(exit_code, 0, stderr)
+      self.assertTrue(os.path.exists(
+        os.path.join(bazel_genfiles2, 'foo/x.out')))
+      exit_code, _, stderr = self.RunBazel(['clean', '--async', '--expunge', '--clean_all'])
+      self.AssertExitCode(exit_code, 0, stderr)
+      self.assertFalse(os.path.exists(output_base2))
+      self.assertFalse(os.path.exists(output_base1))
+
+      # Ensure pattern matches two times in stderr
+      matcher = self._findMatch(' moved to (.*) for deletion', stderr)
+      self.assertEqual(matcher.groups(), 2)
+
   @unittest.skipIf(not test_base.TestBase.IsLinux(),
                    'Async clean only supported on Linux')
   def testBazelAsyncCleanWithReadonlyDirectories(self):
@@ -188,4 +216,4 @@ class BazelCleanTest(test_base.TestBase):
 
 
 if __name__ == '__main__':
-  unittest.main()
+  unittest.main().testBazelAsyncCleanAll()
